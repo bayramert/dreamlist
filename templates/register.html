@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Kayıt Ol{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Kayıt Ol</h2>
+    <form method="POST">
+        <input type="email" name="email" placeholder="Email" required class="form-control mb-2">
+        <input type="password" name="password" placeholder="Şifre" required class="form-control mb-3">
+        <button class="btn btn-primary" type="submit">Kaydol</button>
+    </form>
+</div>
+{% endblock %}

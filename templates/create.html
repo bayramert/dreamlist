@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Hayalini Yaz{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Hayalini Yaz</h2>
+    <form method="POST">
+        <textarea name="dream" class="form-control mb-3" placeholder="Hayalini yaz..." required></textarea>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+        <a href="/detail" class="btn btn-outline-secondary ms-2">Notlarım</a>
+    </form>
+</div>
+{% endblock %}

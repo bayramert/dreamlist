@@ -1,0 +1,56 @@
+# k3s-dreamlist-app.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dreamlist-app-deployment
+  labels:
+    app: dreamlist-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dreamlist-app
+  template:
+    metadata:
+      labels:
+        app: dreamlist-app
+    spec:
+      containers:
+      - name: flask-app
+        image: bayramert/dreamlist-app:latest # BURAYI KENDİ KULLANICI ADINIZLA DEĞİŞTİRİN
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGO_HOST
+          value: mongo
+        - name: MONGO_PORT
+          value: "27017"
+        - name: MONGO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: dreamlist-secrets
+              key: MONGO_USERNAME
+        - name: MONGO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dreamlist-secrets
+              key: MONGO_PASSWORD
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dreamlist-secrets
+              key: SECRET_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dreamlist-app-service # Servisin adı
+spec:
+  selector:
+    app: dreamlist-app # Bu servis, 'dreamlist-app' etiketine sahip pod'ları hedefler
+  ports:
+    - protocol: TCP
+      port: 80 # Servisin dışarıya açacağı port (genellikle HTTP için 80)
+      targetPort: 5000 # Pod'un içindeki uygulamanın çalıştığı port
+  type: NodePort # Uygulamayı küme dışından erişilebilir hale getirir
+  # NodePort yerine LoadBalancer da kullanabilirsiniz eğer bulut sağlayıcınız varsa

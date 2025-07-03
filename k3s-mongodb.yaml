@@ -1,0 +1,65 @@
+# k3s-mongodb.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc # Deployment'da referans verilen PVC adı
+spec:
+  accessModes:
+    - ReadWriteOnce # Tek bir düğümden okunabilir/yazılabilir
+  resources:
+    requests:
+      storage: 1Gi # 1 Gigabayt depolama alanı talep eder
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-deployment
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: dreamlist-secrets
+              key: MONGO_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: dreamlist-secrets
+              key: MONGO_PASSWORD
+        volumeMounts:
+        - name: mongodb-persistent-storage
+          mountPath: /data/db
+        args: ["--auth"]
+      volumes:
+      - name: mongodb-persistent-storage
+        persistentVolumeClaim:
+          claimName: mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo # Flask uygulamasının bağlanacağı servis adı
+spec:
+  selector:
+    app: mongodb # MongoDB Deployment'ınızdaki etiketle eşleşmeli
+  ports:
+    - protocol: TCP
+      port: 27017 # Servisin dinleyeceği port
+      targetPort: 27017 # MongoDB konteynerinin çalıştığı port
+  type: ClusterIP # Bu servis sadece küme içinden erişilebilir olacak

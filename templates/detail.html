@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Hayallerim{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Kaydettiğin Hayaller</h2>
+    <ul class="list-group mb-4">
+        {% for d in dreams %}
+            <li class="list-group-item">{{ d.dream }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/create" class="btn btn-primary">Yeni Hayal Ekle</a>
+</div>
+{% endblock %}
