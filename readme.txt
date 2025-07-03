@@ -1,1 +1,2 @@
 naber
+değiştirdik
