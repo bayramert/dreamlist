@@ -2,15 +2,16 @@ pipeline {
     agent any
 
     environment {
-        // Docker Hub kullanıcı adınızı ve kimlik bilgisi ID'nizi buraya ekleyin
+        // Docker Hub kullanıcı adınız
         DOCKER_USERNAME = 'bayramert'
-        DOCKER_PASS = credentials('dockerhub-credentials') // <-- BU ID EKRAN GÖRÜNTÜNÜZE GÖRE DOĞRU OLANIDIR!
-        
-        // K3s SSH Kimlik Bilgisi ID'si (Jenkins'te tanımlı)
-        K3S_SSH_CREDENTIAL_ID = 'k3s-ssh-credentials' // <-- EKRAN GÖRÜNTÜNÜZE GÖRE DOĞRU OLANIDIR!
-        
-        // K3s Master IP Adresi
-        K3S_MASTER_IP = '10.77.3.19' // K3s master sunucunuzun IP adresi
+        // Jenkins'te tanımladığınız Docker Hub kimlik bilgisi ID'si. Ekran görüntünüze göre DOĞRU OLAN BUDUR.
+        DOCKER_PASS = credentials('dockerhub-credentials') 
+
+        // Jenkins'te tanımladığınız K3s SSH kimlik bilgisi ID'si. Ekran görüntünüze göre DOĞRU OLAN BUDUR.
+        K3S_SSH_CREDENTIAL_ID = 'k3s-ssh-credentials'
+
+        // K3s Master sunucunuzun IP adresi
+        K3S_MASTER_IP = '10.77.3.19'
     }
 
     stages {
@@ -24,7 +25,7 @@ pipeline {
             steps {
                 echo 'Kod GitHub reposundan çekiliyor...'
                 // GitHub deponuz public olduğu için 'credentialsId: 'github-token'' kısmını kaldırdık.
-                // Eğer deponuz private olsaydı bu kısım gerekli olurdu ve 'github-token' kimlik bilgisini doğru yapılandırmanız gerekirdi.
+                // Bu, "CredentialId 'github-token' could not be found." uyarısını giderecektir.
                 git url: 'https://github.com/bayramert/dreamlist.git', branch: 'main' 
             }
         }
@@ -42,14 +43,14 @@ pipeline {
             steps {
                 script {
                     // DOCKER_PASS değişkeni environment bloğunda credentials('dockerhub-credentials') olarak ayarlandığı için
-                    // withCredentials burada doğrudan o ID'yi kullanır.
+                    // withCredentials burada doğru ID'yi kullanacaktır.
                     withCredentials([usernamePassword(credentialsId: DOCKER_PASS, passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME_VAR')]) {
                         echo "Docker Hub'a giriş yapılıyor..."
                         sh "echo ${DOCKER_PASSWORD} | docker login --username ${DOCKER_USERNAME_VAR} --password-stdin"
-                        
+
                         echo "Docker imajı push ediliyor..."
                         sh "docker push ${DOCKER_USERNAME}/dreamlist-app:latest"
-                        
+
                         echo "Docker Hub'dan çıkış yapılıyor..."
                         sh "docker logout"
                     }
@@ -70,7 +71,7 @@ pipeline {
                         sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no k3s-dreamlist-app.yaml ubuntu@${K3S_MASTER_IP}:/tmp/k3s-dreamlist-app.yaml"
 
                         echo "Kubernetes kaynakları uygulanıyor..."
-                        // kubectl komutlarının başında 'sudo ' olduğundan emin olun.
+                        // K3s master üzerindeki izin sorununu çözmek için kubectl komutlarının başında 'sudo ' ekledik.
                         sh "ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${K3S_MASTER_IP} 'sudo kubectl apply -f /tmp/k3s-secret.yaml'"
                         sh "ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${K3S_MASTER_IP} 'sudo kubectl apply -f /tmp/k3s-mongodb.yaml'"
                         sh "ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${K3S_MASTER_IP} 'sudo kubectl apply -f /tmp/k3s-dreamlist-app.yaml'"
@@ -82,7 +83,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             echo "Boru hattı tamamlandı."
