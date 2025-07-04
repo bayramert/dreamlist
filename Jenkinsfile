@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         DOCKER_USERNAME = 'bayramert'
-        // DOCKER_PASS = credentials('dockerhub-credentials') // BU SATIR SİLİNDİ!
-
         K3S_SSH_CREDENTIAL_ID = 'k3s-ssh-credentials'
         K3S_MASTER_IP = '10.77.3.19'
+        // Yeni ortam değişkeni: Build numarası ile imaj etiketi
+        IMAGE_TAG = "${DOCKER_USERNAME}/dreamlist-app:${BUILD_NUMBER}"
     }
 
     stages {
@@ -26,8 +26,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Docker imajı oluşturuluyor: ${DOCKER_USERNAME}/dreamlist-app:latest"
-                    sh "docker build -t ${DOCKER_USERNAME}/dreamlist-app:latest ."
+                    echo "Docker imajı oluşturuluyor: ${IMAGE_TAG}" // :latest yerine yeni tag
+                    sh "docker build -t ${IMAGE_TAG} ."
+                    // Ayrıca eski :latest etiketini de ekleyebilirsiniz, bu opsiyoneldir.
+                    sh "docker tag ${IMAGE_TAG} ${DOCKER_USERNAME}/dreamlist-app:latest"
                 }
             }
         }
@@ -35,13 +37,15 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    // DOCKER_PASS yerine doğrudan ID kullanıldı
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME_VAR')]) {
                         echo "Docker Hub'a giriş yapılıyor..."
                         sh "echo ${DOCKER_PASSWORD} | docker login --username ${DOCKER_USERNAME_VAR} --password-stdin"
 
-                        echo "Docker imajı push ediliyor..."
+                        echo "Docker imajı push ediliyor: ${IMAGE_TAG}" // Yeni tag push ediliyor
+                        sh "docker push ${IMAGE_TAG}"
+                        echo "Docker imajı push ediliyor: ${DOCKER_USERNAME}/dreamlist-app:latest" // :latest de push ediliyor
                         sh "docker push ${DOCKER_USERNAME}/dreamlist-app:latest"
+
 
                         echo "Docker Hub'dan çıkış yapılıyor..."
                         sh "docker logout"
@@ -60,7 +64,12 @@ pipeline {
                         echo "Kubernetes YAML dosyaları K3s master'a kopyalanıyor..."
                         sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no k3s-secret.yaml ubuntu@${K3S_MASTER_IP}:/tmp/k3s-secret.yaml"
                         sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no k3s-mongodb.yaml ubuntu@${K3S_MASTER_IP}:/tmp/k3s-mongodb.yaml"
-                        sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no k3s-dreamlist-app.yaml ubuntu@${K3S_MASTER_IP}:/tmp/k3s-dreamlist-app.yaml"
+
+                        // k3s-dreamlist-app.yaml'ı dinamik olarak güncellemek için yeni bir adım ekleyeceğiz
+                        echo "k3s-dreamlist-app.yaml dosyası güncelleniyor ve kopyalanıyor..."
+                        sh "sed \"s|image: ${DOCKER_USERNAME}/dreamlist-app:latest|image: ${IMAGE_TAG}|g\" k3s-dreamlist-app.yaml > k3s-dreamlist-app-updated.yaml"
+                        sh "scp -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no k3s-dreamlist-app-updated.yaml ubuntu@${K3S_MASTER_IP}:/tmp/k3s-dreamlist-app.yaml"
+
 
                         echo "Kubernetes kaynakları uygulanıyor..."
                         sh "ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no ubuntu@${K3S_MASTER_IP} 'sudo kubectl apply -f /tmp/k3s-secret.yaml'"
