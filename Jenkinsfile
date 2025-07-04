@@ -4,21 +4,21 @@ pipeline {
 
     environment {
         // Ortam değişkenleri, boru hattı boyunca kullanılacak değerleri tanımlar.
-        // Lütfen 'PUTTYDE1_IP_ADRESİ' yerine K3s master'ınızın gerçek IP adresini girin.
         DOCKER_HUB_USERNAME = 'bayramert' // Kendi Docker Hub kullanıcı adınız
         DOCKER_HUB_CREDENTIALS_ID = 'dockerhub-credentials' // Jenkins'teki Docker Hub kimlik bilgilerinin ID'si
         KUBERNETES_CREDENTIALS_ID = 'k3s-ssh-credentials' // Jenkins'teki K3s SSH kimlik bilgilerinin ID'si
-        K3S_NODE_IP = '10.77.3.19' // K3s master sunucunuzun IP adresi (örn: "192.168.1.100")
+        K3S_NODE_IP = '10.77.3.19' // K3s master sunucunuzun IP adresi
         K3S_NODE_USER = 'ubuntu' // K3s master SSH kullanıcı adınız
+        GITHUB_CREDENTIALS_ID = 'github-token' // Jenkins'teki GitHub Personal Access Token'ınızın ID'si
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                // GitHub deponuzdaki kodu çeker.
-                // Jenkins işi yapılandırmasında SCM olarak Git ve kimlik bilgileri ayarlandığı için burada ek bir adım gerekli değil.
-                // Eğer farklı bir branch çekmek isterseniz 'checkout scm' üzerine eklenebilir.
                 echo "Kod GitHub reposundan çekiliyor..."
+                // GitHub token'ını (Secret text türünde) kullanarak depoyu klonla
+                // Bu adım, Jenkins'in SCM UI'ından Credentials seçeneği görünmese bile çalışacaktır.
+                git branch: 'main', credentialsId: "${GITHUB_CREDENTIALS_ID}", url: 'https://github.com/bayramert/dreamlist.git'
             }
         }
 
