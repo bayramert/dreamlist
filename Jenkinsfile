@@ -16,7 +16,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', credentialsId: 'github-token', url: 'https://github.com/kullanici_adiniz/dreamlist-app.git'
+                git branch: 'main', credentialsId: 'github-token', url: 'https://github.com/bayramert/dreamlist-app.git'
             }
         }
 
